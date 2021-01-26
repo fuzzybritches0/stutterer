@@ -1,0 +1,9 @@
+A voice recorder that uses samples to record spoken text (implemented in bash)
+
+the file stutterer.deb can be installed on any debian-derived system that has pulseaudio-utils available.
+
+like so:
+	$ sudo apt install pulseaudio-utils (very likely already installed)
+	$ sudo dpkg -i stutterer.deb
+
+it uses parec and paplay to do the job.

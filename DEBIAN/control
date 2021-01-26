@@ -1,0 +1,10 @@
+Package: stutterer
+Version: 0.2-1
+Priority: optional
+Section: utils
+Maintainer: fuzzybritches
+Architecture: all
+Depends: pulseaudio-utils
+Description: terminal based audio recording program
+  This program helps to record fragments which can be (re)recorded individually.
+  Think of recording an audio book, piece by piece. 

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=stutterer
+Comment=record your voice for audio-books
+Categories=GTK;GNOME;Application;AudioVideo;
+Encoding=UTF-8
+Exec=x-terminal-emulator -e stutterer -geometry 100x30
+Icon=audio-input-microphone-symbolic.symbolic.png
+Terminal=false
+Type=Application

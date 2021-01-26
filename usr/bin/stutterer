@@ -1,0 +1,169 @@
+#!/bin/bash
+number=0
+cnumber=0
+directory="${HOME}/stutterer"
+status="paused"
+
+[ ! -d "${directory}" ] && mkdir ${directory}
+[ ! -d "${directory}" ] && exit 0
+
+cd ${directory}
+
+if [ -e "${directory}/current" ]; then
+  read cnumber < ${directory}/current
+  read number < ${directory}/number
+fi
+
+join_raw () {
+  for file in ${directory}/*.raw; do
+    [ "${file}" != "${directory}/all.raw" ] && cat ${file} >> ${1}
+  done
+}
+
+numcorr () {
+  fileout=${cnumber}    
+  while [ "${#fileout}" -ne "10" ]; do
+    fileout="0${fileout}"
+  done
+}
+
+if_record () {
+  [ "$(pidof parec)" ] && kill $(pidof parec)
+  [ "$(pidof paplay)" ] && kill $(pidof paplay)
+	status="paused"
+}
+
+display() { 
+  clear
+  echo "-------------------------------------------------------------------------"
+  echo "			     S T U T T E R E R  V  0 . 2"
+  echo "-------------------------------------------------------------------------"
+  echo "ENTER ... record new sample/stop  p ... play sample   a ... play all"
+  echo "r ... re-record curr. sample      b ... prev. sample  n ... next sample"
+  echo "l ... goto last                   f ... goto first"
+  echo "c ... clear all                   e ... export        q ... quit"
+  echo "-------------------------------------------------------------------------"
+  echo "STATUS: ${status}"
+  echo "total sample: ${number}	current sample: ${cnumber}"
+  echo "-------------------------------------------------------------------------"
+  echo -n "-->"
+}
+
+update_display() {
+  while [ "$(pidof paplay)" ]; do
+    sleep .2s
+  done
+  status="paused"
+  display
+}
+
+cat_all() {
+  for file in ${directory}/*.raw; do
+    cat ${file}
+  done
+}
+
+while :; do
+  input=
+  display
+  read input
+  case "${input}" in
+    e)
+	    if_record
+	    echo -n "Enter filname:"
+	    read input
+      if [ -f "${HOME}/${input}.raw" ]; then
+        echo -n "File already exists! Overwrite? YES/*:"
+        read answer
+        [ "${answer}" == "YES" ] && rm ${HOME}/${input}.raw
+      fi
+      status="paused"
+	    if [ ! -f "${HOME}/${input}.raw" ]; then
+	      [ "${number}" -gt "1" ] && join_raw ${HOME}/${input}.raw
+	      [ "${number}" -eq "1" ] && cp 0000000001.raw ${HOME}/${input}.raw
+	      status="exported / paused"
+	      [ "${number}" -eq "0" ] && status="nothing to export / paused"
+      fi
+      ;;	
+    c)
+	    if_record
+      if [ "${number}" -gt "0" ]; then
+        echo -n "Are you sure? YES/*? "
+        read confirm
+        if [ "${confirm}" == "YES" ]; then
+	        rm -f ${directory}/*.raw
+	        rm -f ${directory}/current
+	        rm -f ${directory}/number
+	        number=0
+	        cnumber=0
+        fi
+      fi
+      ;;
+    b)
+	    if_record
+	    [ "${cnumber}" -gt "1" ] && let "cnumber -= 1"
+      ;;
+    l)
+	    if_record
+	    cnumber=${number}
+      ;;
+    f)
+	    if_record
+	    cnumber="1"
+      ;;
+    n)
+	    if_record
+	    [ "${cnumber}" -ne "${number}" ] && let "cnumber += 1"
+      ;;
+    p)
+      if_record
+      numcorr
+      if [ "${cnumber}" -gt "0" ]; then
+        status="playing... (press enter to stop)"
+        cat ${fileout}.raw | paplay --raw &
+        update_display &
+      fi
+      ;;
+    a)
+      if_record
+      if [ "${number}" -gt "0" ]; then
+        status="playing... (press enter to stop)"
+        cat_all | paplay --raw  &
+        update_display &
+      fi
+      ;;
+    q)
+	    if_record
+      if [ "${number}" -gt "0" ]; then
+        echo ${cnumber} > ${directory}/current
+        echo ${number} > ${directory}/number
+      fi
+	    clear
+	    cd ${HOME}
+	    exit 0
+      ;;
+    r)
+      if [ "${cnumber}" -gt "0" ]; then
+    	  numcorr
+		    parec --raw --latency-msec=50 "${fileout}.raw" & 
+        status="recording... (press enter to stop)"
+      fi
+      ;;
+    *)
+      if [ "$(pidof parec)" ]; then
+        kill $(pidof parec)
+	      status="paused"
+      elif [ "$(pidof paplay)" ]; then
+        kill $(pidof paplay)
+        status="paused"
+        display
+      else
+	      let "number += 1"
+	      cnumber=${number}
+	      numcorr
+		    parec --latency-msec=50 --raw "${fileout}.raw" & 
+        status="recording... (press enter to stop)"
+      fi
+      ;;
+  esac    
+done
